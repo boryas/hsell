@@ -33,5 +33,10 @@ runPipeline iopl = do
         pl <- iopl
         mapM createProcess (reverse pl)
 
+($$%) = runPipeline
+($%) = initPipeline
+($$) = qProc
+($|) = pipe
+
 main = do
-        runPipeline $ initPipeline `pipe` qProc "ls -la" `pipe` qProc "grep foo" `pipe` qProc "wc"
+        ($$%) $ ($%) $| ($$) "ls -la" $| ($$) "grep foo" $| ($$) "wc"

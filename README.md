@@ -18,21 +18,24 @@ or
 `x=$((x + 1))`
 
 and the list goes on. Even worse, functions, data structures, modules, and other important programming niceties often don't quite match expectations. The typical solution to this problem is to switch to a more "programm-y" scripting language, like Python. But there, the beautiful pipelines turn into
-```
+```python
 p1 = subprocess.Popen(['ls', '-la'], stdout=subprocess.PIPE)
 p2 = subprocess.Popen(['grep', 'foo'], stdin=p1.stdout, stdout=subprocess.PIPE)
 p3 = subprocess.Popen(['wc', '-l'], stdin=p2.stdout)
 ```
-which is nice and all, but it's no `ls -la | grep foo | wc -l'
+which is nice and all, but it's no `ls -la | grep foo | wc -l`
 
-Enter Haskell. I have a feeling that with Haskell's strengths in domain specific languages, it may be possible to make something that looks like
-`($$!) "ls" $| grep "foo" $| "wc -l"`
-and have some similarly terse syntax to handle other redirection/job-control primitives.
+Enter Haskell. I have a feeling that with Haskell's strengths in domain specific languages, it may be possible to make something that looks a lot more like a shell pipeline, but still lets you quickly escape hatch into "proper" programming.
 
 The best I have done so far is:
 
 ```haskell
 runPipeline $ initPipeline `pipe` qProc "ls -la" `pipe` qProc "grep foo" `pipe` qProc "wc"
+```
+
+or the best SIGILED-UP attempt so far:
+```haskell
+($$%) $ ($%) $| ($$) "ls -la" $| ($$) "grep foo" $| ($$) "wc"
 ```
 
 which feels like a decent start.
