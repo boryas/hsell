@@ -35,7 +35,7 @@ runPipeline $ initPipeline `pipe` qProc "ls -la" `pipe` qProc "grep foo" `pipe` 
 
 or the best SIGILED-UP attempt so far:
 ```haskell
-($$%) $ ($%) $| ($$) "ls -la" $| ($$) "grep foo" $| ($$) "wc"
+(>%) $ "ls -la" $|| "grep foo" $| "wc"
 ```
 
-which feels like a decent start.
+which feels like a pretty decent start.

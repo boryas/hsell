@@ -1,3 +1,4 @@
 cmd
+foo
 *.o
 *.hi

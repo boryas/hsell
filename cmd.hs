@@ -4,15 +4,15 @@ import System.Process
 
 type Pipeline = [CreateProcess]
 
-initPipeline :: IO Pipeline
-initPipeline = return []
+nullPipeline :: IO Pipeline
+nullPipeline = return []
 
 qProc :: String -> CreateProcess
 qProc = ((`ap` tail) . (. head)) proc . words
 
-purePipe :: Pipeline -> CreateProcess -> IO Pipeline
-purePipe [] newp = return [newp]
-purePipe (p:ps) newp = do
+_pipe :: Pipeline -> CreateProcess -> IO Pipeline
+_pipe [] newp = return [newp]
+_pipe (p:ps) newp = do
         (pipe_rd, pipe_wr) <- createPipe
         --print . show $ (cmdspec p, cmdspec newp, pipe_rd, pipe_wr)
         let pi = newp { std_in = UseHandle pipe_rd }
@@ -22,7 +22,7 @@ purePipe (p:ps) newp = do
 pipe :: IO Pipeline -> CreateProcess -> IO Pipeline
 pipe iopl newp = do
         line <- iopl
-        purePipe line newp
+        _pipe line newp
 
 myCreateProcess p = do
         --print . show $ cmdspec p
@@ -33,10 +33,22 @@ runPipeline iopl = do
         pl <- iopl
         mapM createProcess (reverse pl)
 
-($$%) = runPipeline
-($%) = initPipeline
-($$) = qProc
-($|) = pipe
+(>%) = runPipeline
+
+initPipeline :: String -> IO Pipeline
+initPipeline = pipe nullPipeline . qProc
+
+stringPipe :: IO Pipeline -> String -> IO Pipeline
+stringPipe = (. qProc) . pipe
+($|) = stringPipe
+
+($|%) :: String -> String -> IO Pipeline
+($|%) cmd1 cmd2 = (initPipeline cmd1) $| cmd2
+-- foo cmd1 cmd2 = stringPipe (initPipeline cmd1) cmd2
+
+($||) :: String -> String -> IO Pipeline
+($||) = ($|) . initPipeline
 
 main = do
-        ($$%) $ ($%) $| ($$) "ls -la" $| ($$) "grep foo" $| ($$) "wc"
+        --($$) $ ($%) "ls -la" $| "grep foo" $| "wc"
+        (>%) $ "ls -la" $|| "grep foo" $| "wc"
