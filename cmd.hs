@@ -1,3 +1,4 @@
+import Control.Monad
 import GHC.IO.Handle
 import System.Process
 
@@ -5,6 +6,9 @@ type Pipeline = [CreateProcess]
 
 initPipeline :: IO Pipeline
 initPipeline = return []
+
+qProc :: String -> CreateProcess
+qProc = ((`ap` tail) . (. head)) proc . words
 
 purePipe :: Pipeline -> CreateProcess -> IO Pipeline
 purePipe [] newp = return [newp]
@@ -30,4 +34,4 @@ runPipeline iopl = do
         mapM createProcess (reverse pl)
 
 main = do
-        runPipeline $ initPipeline `pipe` (proc "ls" ["/usr/local/bin"]) `pipe` (proc "wc" ["-l"]) `pipe` (proc "wc" []) `pipe` (proc "wc" [])
+        runPipeline $ initPipeline `pipe` qProc "ls -la" `pipe` qProc "grep foo" `pipe` qProc "wc"

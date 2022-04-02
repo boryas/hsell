@@ -28,3 +28,9 @@ which is nice and all, but it's no `ls -la | grep foo | wc -l'
 Enter Haskell. I have a feeling that with Haskell's strengths in domain specific languages, it may be possible to make something that looks like
 `($$!) "ls" $| grep "foo" $| "wc -l"`
 and have some similarly terse syntax to handle other redirection/job-control primitives.
+
+The best I have done so far is:
+
+`runPipeline $ initPipeline \`pipe\` qProc "ls -la" \`pipe\` qProc "grep foo" \`pipe\` qProc "wc"`
+
+which feels like a decent start.
