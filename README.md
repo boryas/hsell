@@ -31,6 +31,8 @@ and have some similarly terse syntax to handle other redirection/job-control pri
 
 The best I have done so far is:
 
-`runPipeline $ initPipeline \`pipe\` qProc "ls -la" \`pipe\` qProc "grep foo" \`pipe\` qProc "wc"`
+```haskell
+runPipeline $ initPipeline `pipe` qProc "ls -la" `pipe` qProc "grep foo" `pipe` qProc "wc"
+```
 
 which feels like a decent start.
