@@ -1,4 +1,8 @@
 cmd
-foo
 *.o
 *.hi
+
+foo
+lol
+dd-err
+tmpfs-mounts
