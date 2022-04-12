@@ -3,13 +3,16 @@ import GHC.IO.Handle
 import System.IO
 import System.Process
 
+-- TODO: create a Command typeclass that admits both commands and pipelines
+-- doing so should help unify the various idiosyncracies like ($.), ($||), and ($<)
+type Command = String
 type Pipeline = [CreateProcess]
 
 {- Functions and operators for creating and running pipelines -}
 emptyPipe :: IO Pipeline
 emptyPipe = return []
 
-qProc :: String -> CreateProcess
+qProc :: Command -> CreateProcess
 qProc = ((`ap` tail) . (. head)) proc . words
 
 _pipe :: Pipeline -> CreateProcess -> IO Pipeline
@@ -26,29 +29,29 @@ pipe iopl newp = do
         line <- iopl
         _pipe line newp
 
-myCreateProcess p = do
+instrumentedCreateProcess p = do
         print . show $ cmdspec p
         createProcess p
 
 runPipeline :: IO Pipeline -> IO [(Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)]
 runPipeline iopl = do
         pl <- iopl
-        mapM myCreateProcess (reverse pl)
+        mapM createProcess (reverse pl)
 
 (>%) = runPipeline
 
-initPipeline :: String -> IO Pipeline
+initPipeline :: Command -> IO Pipeline
 initPipeline = pipe emptyPipe . qProc
 ($.) = initPipeline
 
-stringPipe :: IO Pipeline -> String -> IO Pipeline
+stringPipe :: IO Pipeline -> Command -> IO Pipeline
 stringPipe = (. qProc) . pipe
 ($|) = stringPipe
 
-($|%) :: String -> String -> IO Pipeline
+($|%) :: Command -> Command -> IO Pipeline
 ($|%) cmd1 cmd2 = (initPipeline cmd1) $| cmd2
 
-($||) :: String -> String -> IO Pipeline
+($||) :: Command -> Command -> IO Pipeline
 ($||) = ($|) . initPipeline
 
 {- Functions and operators for redirection -}
@@ -82,7 +85,7 @@ redirect iopl stream hout = do
 --       instead of breaking the pipeline "properly" like output.
 --       Furthermore, only the syntax "cmd < file" is supported. Though, I am
 --       partial to "< file cmd" in general.
-($<) :: String -> String -> IO Pipeline
+($<) :: Command -> String -> IO Pipeline
 ($<) cmd fin = do
         hin <- openFile fin ReadMode
         redirect (initPipeline cmd) In hin
