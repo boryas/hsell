@@ -95,7 +95,43 @@ redirect iopl stream hout = do
         herr <- openFile fout WriteMode
         redirect iopl Err herr
 
+-- TODO: shorthand for sinking a pipeline before running it
+_sink :: Pipeline -> Pipeline
+_sink [] = []
+_sink (p:ps) = (p { std_out = CreatePipe }):ps
+
+sink :: IO Pipeline -> IO Pipeline
+sink iopl = do
+        pl <- iopl
+        return (_sink pl)
+
+_collect :: [(Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)] -> Maybe Handle
+_collect procs =
+        let out = last procs in
+            case out of (_, Just hout, _, _) -> Just hout
+                        _ -> Nothing
+
+collect :: IO [(Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)] -> IO (Maybe Handle)
+collect ioprocs = do
+        procs <- ioprocs
+        return $ _collect procs
+
+-- TODO: MaybeT or traverse to make it pointfree, and return a Nothing instead of an error (?!)
+(>%>) :: IO Pipeline -> IO String
+(>%>) iopl = do
+        (Just hout) <- collect . runPipeline . sink $ iopl
+        hGetContents hout
+
 main = do
-        (>%) $ "ls -la" $|| "grep foo" $| "wc" $> "foo"
-        (>%) $ "grep tmpfs" $< "/proc/mounts" $| "wc -l" $> "tmpfs-mounts"
-        (>%) $ (($.) "dd if=/dev/zero bs=4k count=1") $?> "dd-err" $| "wc -l"
+        -- just one command --
+        (>%) $ ($.) "ls -la" $> "ls-la.out"
+        -- pipes and out redirect
+        (>%) $ "ls -la" $|| "grep foo" $| "wc" $> "count-foo.out"
+        -- pipe and in/out redirect
+        (>%) $ "grep tmpfs" $< "/proc/mounts" $| "wc -l" $> "tmpfs-mounts.out"
+        -- pipe and err/out redirect
+        (>%) $ (($.) "dd if=/dev/zero bs=4k count=1") $?> "dd-err" $| "wc -l" $> "wc-dd-zeros.out"
+
+        -- sink command into a string
+        d <- (>%>) $ "ls -la" $|| "grep foo"
+        putStrLn $ "sank cmd and got output:\n" ++ d ++ "(length " ++ (show . length $ d) ++ ")"
